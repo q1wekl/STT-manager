@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="app.MainController">
+
+    <!-- Верх -->
+    <top>
+        <Label prefHeight="30.0" prefWidth="85.0" text="Мій застосунок" BorderPane.alignment="CENTER" />
+    </top>
+
+    <!-- Центр -->
+    <center>
+        <VBox alignment="CENTER" prefHeight="571.0" prefWidth="621.0" spacing="10">
+            <Button fx:id="fileSelectionButton" onAction="#handleOpenFile" text="Обрати файл" />
+            <Button text="Кнопка 2" />
+        </VBox>
+    </center>
+
+</BorderPane>

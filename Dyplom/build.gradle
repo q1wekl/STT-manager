@@ -13,16 +13,14 @@ javafx {
     version = "21"
     modules = [ 'javafx.controls', 'javafx.fxml' ]
 }
-
+tasks.withType(JavaExec) {
+    systemProperty "file.encoding", "UTF-8"
+}
 dependencies {
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation 'org.openjfx:javafx-controls:21'
+    implementation 'org.openjfx:javafx-fxml:21'
 }
 application {
-    mainClass = 'org.example.Main'
+    mainClass = 'app.Main'
 }
 
-test {
-    useJUnitPlatform()
-}
