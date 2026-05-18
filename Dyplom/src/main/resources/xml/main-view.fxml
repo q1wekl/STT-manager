@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.BorderPane?>
@@ -23,5 +24,8 @@
    <right>
       <TextArea fx:id="resultText" editable="false" prefHeight="571.0" prefWidth="424.0" wrapText="true" BorderPane.alignment="CENTER" />
    </right>
+   <left>
+      <ComboBox fx:id="modelTypeComboBox" prefWidth="150.0" visibleRowCount="5" BorderPane.alignment="CENTER" />
+   </left>
 
 </BorderPane>
