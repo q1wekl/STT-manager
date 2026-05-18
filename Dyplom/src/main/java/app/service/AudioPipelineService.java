@@ -7,15 +7,13 @@ import java.io.File;
 
 public class AudioPipelineService {
     private final AudioDecoder decoder = new AudioDecoder();
-    private WhisperService whisper;
-    private String currentModelPath = "";
+    private OnnxWhisperService whisper;
 
     public TranscriptResult processChunk(File wavChunk, TranscriptionConfig config){
-        if(whisper ==null|| !currentModelPath.equals(config.getModelPath())){
-            this.whisper = new WhisperService(config.getModelPath());
-            this.currentModelPath= config.getModelPath();
+        if (whisper == null) {
+            this.whisper = new OnnxWhisperService(config.getModelPath());
         }
         float[] audio = decoder.decode(wavChunk);
-        return whisper.transcribe(audio,config);
+        return whisper.transcribe(audio, config);
     }
 }

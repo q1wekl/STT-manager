@@ -20,6 +20,7 @@ public class FFmpegConverter {
                     "-i", input.getAbsolutePath(),
                     "-ar", "16000",
                     "-ac", "1",
+                    "-c:a", "pcm_s16le",
                     "-f", "wav",
                     outputPattern.getAbsolutePath()
             );
@@ -52,6 +53,7 @@ public class FFmpegConverter {
                     "-i", input.getAbsolutePath(),
                     "-ar", "16000",
                     "-ac", "1",
+                    "-c:a", "pcm_s16le",
                     "-f", "wav",
                     output.getAbsolutePath()
             );
