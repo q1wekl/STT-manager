@@ -2,10 +2,11 @@
 
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="app.MainController">
+<BorderPane xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="app.controller.MainController">
 
     <!-- Верх -->
     <top>
@@ -16,8 +17,11 @@
     <center>
         <VBox alignment="CENTER" prefHeight="571.0" prefWidth="621.0" spacing="10">
             <Button fx:id="fileSelectionButton" onAction="#handleOpenFile" text="Обрати файл" />
-            <Button text="Кнопка 2" />
+            <Button fx:id="speechToTextButton" onAction="#speechToText" text="Перетворити Аудіо в файл" />
         </VBox>
     </center>
+   <right>
+      <TextArea fx:id="resultText" editable="false" prefHeight="571.0" prefWidth="424.0" wrapText="true" BorderPane.alignment="CENTER" />
+   </right>
 
 </BorderPane>
