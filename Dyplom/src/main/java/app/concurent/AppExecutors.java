@@ -1,56 +1,72 @@
 package app.concurent;
 
+import ai.onnxruntime.OrtException;
 import app.model.TranscriptResult;
 import app.model.TranscriptionConfig;
 import app.service.AudioPipelineService;
 import app.service.FFmpegConverter;
-import javafx.concurrent.Task;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 public class AppExecutors {
     private static final AppExecutors instance = new AppExecutors();
-    private final ExecutorService sttExecutor = Executors.newFixedThreadPool(1);
-    private final ExecutorService videoExecutor = Executors.newFixedThreadPool(2);
+
+    private final ExecutorService ioExecutor  = Executors.newFixedThreadPool(1); // FFmpeg
+    private final ExecutorService sttExecutor = Executors.newFixedThreadPool(1); // Whisper
     private final AudioPipelineService audioPipeline = new AudioPipelineService();
 
-    public static AppExecutors getInstance() {
-        return instance;
+    public static AppExecutors getInstance() { return instance; }
+
+    public void resetWhisperService() {
+        audioPipeline.reset();
     }
-    public CompletableFuture<TranscriptResult> supplySpeechToText(File inputFile, TranscriptionConfig config) {
+
+    public CompletableFuture<TranscriptResult> supplySpeechToText(
+
+            File inputFile,
+            TranscriptionConfig config,
+            java.util.function.Consumer<String> onStatus  // ← callback для статусу
+    ) {
+
+        System.out.println("[Executors] supplySpeechToText викликано");
         return CompletableFuture.supplyAsync(() -> {
-            FFmpegConverter ffmpeg = new FFmpegConverter();
-            List<File> chunks = ffmpeg.convertAndSplitToWav(inputFile);
+                    System.out.println("[Executors] ioExecutor: починаємо FFmpeg");
+                    FFmpegConverter ffmpeg = new FFmpegConverter();
+                    List<File> chunks = ffmpeg.convertAndSplitToWav(inputFile);
+                    System.out.println("[Executors] FFmpeg готово, чанків: " + chunks.size()); // ← додай
+                    return chunks;
+                }, ioExecutor)
 
-            List<CompletableFuture<TranscriptResult>> futures = chunks.stream()
-                    .map(chunk -> CompletableFuture.supplyAsync(() -> {
-                        TranscriptResult res = audioPipeline.processChunk(chunk, config);
-                        chunk.delete();
-                        return res;
-                    }, sttExecutor))
-                    .collect(Collectors.toList());
+                .thenApplyAsync(chunks -> {
+                    System.out.println("[Executors] sttExecutor: починаємо STT");
 
-            List<TranscriptResult> results = futures.stream()
-                    .map(CompletableFuture::join)
-                    .collect(Collectors.toList());
+                    StringBuilder finalText = new StringBuilder();
 
-            StringBuilder finalText = new StringBuilder();
-            for (TranscriptResult res : results) {
-                finalText.append(res.getFullText()).append("\n");
-            }
-            if (!chunks.isEmpty()) {
-                chunks.get(0).getParentFile().delete();
-            }
-            return new TranscriptResult(new ArrayList<>(), finalText.toString());
-        });
+                    // Послідовно — без вкладених CompletableFuture на тому ж executor
+                    for (File chunk : chunks) {
+                        try {
+                            System.out.println("[Executors] Обробка: " + chunk.getName());
+                            TranscriptResult res = audioPipeline.processChunk(chunk, config);
+                            System.out.println("[Executors] Готово: " + chunk.getName());
+                            finalText.append(res.getFullText()).append("\n");
+                        } catch (OrtException e) {
+                            throw new RuntimeException("STT помилка: " + chunk.getName(), e);
+                        } finally {
+                            chunk.delete();
+                        }
+                    }
+
+                    if (!chunks.isEmpty()) {
+                        chunks.get(0).getParentFile().delete();
+                    }
+
+                    return new TranscriptResult(java.util.List.of(), finalText.toString().trim());
+
+                }, sttExecutor);
     }
-
 }

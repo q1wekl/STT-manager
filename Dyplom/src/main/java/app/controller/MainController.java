@@ -2,11 +2,13 @@ package app.controller;
 
 import app.concurent.AppExecutors;
 import app.model.TranscriptionConfig;
+import app.service.AudioDecoder;
 import app.service.FFmpegConverter;
 import app.service.OnnxWhisperService;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.stage.FileChooser;
@@ -15,128 +17,73 @@ import javafx.stage.Stage;
 import java.io.File;
 
 public class MainController {
+    private static final java.util.Map<String, String> MODEL_MAP = java.util.Map.of(
+            "Tiny (Швидка)",        "tiny",
+            "Base (Баланс)",        "base",
+            "Small (Хороша якість)", "small",
+            "Medium (Висока якість)","medium"
+    );
     private String filePath;
     @FXML
     private TextArea resultText;
     @FXML
     private ComboBox<String> modelTypeComboBox;
+    @FXML private Button speechToTextButton;
 
     @FXML
     public void initialize() {
         ObservableList<String> models = FXCollections.observableArrayList(
-                "Tiny (Швидка)",
-                "Base (Баланс)",
-                "Small (Хороша якість)",
-                "Medium (Висока якість)"
+                MODEL_MAP.keySet().stream().sorted().toList()
         );
         modelTypeComboBox.setItems(models);
         modelTypeComboBox.setValue("Small (Хороша якість)");
+        modelTypeComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            AppExecutors.getInstance().resetWhisperService();
+        });
     }
 
     @FXML
     private void speechToText() {
-
         if (filePath == null) {
             resultText.setText("Файл не обрано");
             return;
         }
 
-        resultText.setText("Підготовка аудіо...");
+        setUiProcessing(true);
 
         File input = new File(filePath);
+        String modelPrefix = MODEL_MAP.getOrDefault(
+                modelTypeComboBox.getValue(), "small"
+        );
+        String modelBasePath = "models/whisper/whisper-" + modelPrefix;
 
-        String selectedModel = modelTypeComboBox.getValue();
-        String modelPrefix = "small";
-
-        if (selectedModel.contains("Tiny")) {
-            modelPrefix = "tiny";
-        } else if (selectedModel.contains("Base")) {
-            modelPrefix = "base";
-        } else if (selectedModel.contains("Medium")) {
-            modelPrefix = "medium";
-        }
-
-        String modelBasePath =
-                "models/whisper/whisper-" + modelPrefix;
-
-        new Thread(() -> {
-
-            try {
-
-                javafx.application.Platform.runLater(() ->
-                        resultText.setText("Конвертація через FFmpeg...")
-                );
-
-                // FFmpeg conversion
-                FFmpegConverter converter =
-                        new FFmpegConverter();
-
-                File wavFile =
-                        converter.convertToWav(input);
-
-                javafx.application.Platform.runLater(() ->
-                        resultText.setText("Зчитування WAV...")
-                );
-
-                // WAV -> float[]
-                float[] audio =
-                        app.utils.AudioUtils.loadAudio(
-                                wavFile.getAbsolutePath()
-                        );
-
-                javafx.application.Platform.runLater(() ->
-                        resultText.setText("Завантаження ONNX моделей...")
-                );
-
-                // Whisper service
-                OnnxWhisperService whisperService =
-                        new OnnxWhisperService(modelBasePath);
-
-                TranscriptionConfig config =
-                        new TranscriptionConfig(
-                                modelBasePath,
-                                4,
-                                "uk",
-                                false
-                        );
-
-                javafx.application.Platform.runLater(() ->
-                        resultText.setText("Розпізнавання мовлення...")
-                );
-
-                // Inference
-                var result =
-                        whisperService.transcribe(
-                                audio,
-                                config
-                        );
-
-                javafx.application.Platform.runLater(() -> {
-
-                    String text = result.getFullText();
-
-                    if (text == null || text.isBlank()) {
+        TranscriptionConfig config = new TranscriptionConfig(
+                modelBasePath,
+                4,
+                "en",
+                false
+        );
+        System.out.println("[Controller] Викликаємо supplySpeechToText");
+        AppExecutors.getInstance()
+                .supplySpeechToText(input, config, this::updateStatus)  // ← передаємо callback
+                .thenAccept(result -> {
+                    javafx.application.Platform.runLater(() -> {
+                        String text = result.getFullText();
                         resultText.setText(
-                                "Текст не розпізнано"
+                                (text == null || text.isBlank()) ? "Текст не розпізнано" : text
                         );
-                    } else {
-                        resultText.setText(text);
-                    }
+                        setUiProcessing(false);
+                    });
+                })
+                .exceptionally(ex -> {
+                    javafx.application.Platform.runLater(() -> {
+                        // getCause() бо CompletableFuture обгортає в CompletionException
+                        Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                        resultText.setText("Помилка:\n" + cause.getMessage());
+                        setUiProcessing(false);
+                    });
+                    return null;
                 });
-
-            } catch (Exception ex) {
-
-                ex.printStackTrace();
-
-                javafx.application.Platform.runLater(() -> {
-
-                    resultText.setText(
-                            "Помилка:\n" + ex.getMessage()
-                    );
-                });
-            }
-
-        }).start();
     }
 
     @FXML
@@ -155,4 +102,17 @@ public class MainController {
             resultText.setText("Обрано файл: " + file.getAbsolutePath());
         }
     }
+
+    private void updateStatus(String message) {
+        javafx.application.Platform.runLater(() -> resultText.setText(message));
+    }
+
+    private void setUiProcessing(boolean isProcessing) {
+        javafx.application.Platform.runLater(() -> {
+            speechToTextButton.setDisable(isProcessing);
+            modelTypeComboBox.setDisable(isProcessing);
+        });
+    }
+
+
 }

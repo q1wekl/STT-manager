@@ -25,5 +25,9 @@ public class Main extends Application{
 
     }
 
-    public static void main(String[] args) throws IOException {launch();}
+    public static void main(String[] args) throws IOException {
+        System.setOut(new java.io.PrintStream(System.out, true, "UTF-8"));
+        System.setErr(new java.io.PrintStream(System.err, true, "UTF-8"));
+        launch();
+    }
 }
