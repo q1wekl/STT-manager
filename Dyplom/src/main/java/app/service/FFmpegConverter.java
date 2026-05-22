@@ -22,7 +22,7 @@ public class FFmpegConverter {
                     "-ac", "1",
                     "-c:a", "pcm_s16le",
                     "-f", "segment",
-                    "-segment_time", "30",
+                    "-segment_time", "15",
                     "-reset_timestamps", "1",
                     outputPattern.getAbsolutePath()
             );

@@ -1,6 +1,5 @@
 package app.concurent;
 
-import ai.onnxruntime.OrtException;
 import app.model.TranscriptResult;
 import app.model.TranscriptionConfig;
 import app.service.AudioPipelineService;
@@ -8,65 +7,73 @@ import app.service.FFmpegConverter;
 
 import java.io.File;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class AppExecutors {
+
     private static final AppExecutors instance = new AppExecutors();
 
-    private final ExecutorService ioExecutor  = Executors.newFixedThreadPool(1); // FFmpeg
-    private final ExecutorService sttExecutor = Executors.newFixedThreadPool(1); // Whisper
-    private final AudioPipelineService audioPipeline = new AudioPipelineService();
 
-    public static AppExecutors getInstance() { return instance; }
+    private final ExecutorService sttExecutor =
+            Executors.newSingleThreadExecutor();
 
-    public void resetWhisperService() {
-        audioPipeline.reset();
+    private final ExecutorService ioExecutor =
+            Executors.newSingleThreadExecutor();
+
+    private AudioPipelineService audioPipeline;
+    private String currentModelPath;
+
+    public static AppExecutors getInstance() {
+        return instance;
+    }
+
+    private synchronized void ensurePipeline(String modelPath) {
+        if (audioPipeline == null || !modelPath.equals(currentModelPath)) {
+            audioPipeline = new AudioPipelineService(modelPath);
+            currentModelPath = modelPath;
+            System.out.println("[Executors] Pipeline initialized: " + modelPath);
+        }
     }
 
     public CompletableFuture<TranscriptResult> supplySpeechToText(
-
             File inputFile,
             TranscriptionConfig config,
-            java.util.function.Consumer<String> onStatus  // ← callback для статусу
+            Consumer<String> onStatus
     ) {
-
-        System.out.println("[Executors] supplySpeechToText викликано");
         return CompletableFuture.supplyAsync(() -> {
-                    System.out.println("[Executors] ioExecutor: починаємо FFmpeg");
+                    onStatus.accept("Підготовка аудіо...");
                     FFmpegConverter ffmpeg = new FFmpegConverter();
                     List<File> chunks = ffmpeg.convertAndSplitToWav(inputFile);
-                    System.out.println("[Executors] FFmpeg готово, чанків: " + chunks.size()); // ← додай
+                    onStatus.accept("Чанків: " + chunks.size());
                     return chunks;
-                }, ioExecutor)
+                }, ioExecutor).thenApplyAsync(chunks -> {
+                    ensurePipeline(config.getModelPath());
+                    onStatus.accept("Обробка на GPU (Vulkan)...");
 
-                .thenApplyAsync(chunks -> {
-                    System.out.println("[Executors] sttExecutor: починаємо STT");
-
-                    StringBuilder finalText = new StringBuilder();
-
-                    // Послідовно — без вкладених CompletableFuture на тому ж executor
-                    for (File chunk : chunks) {
+                    StringBuilder fullText = new StringBuilder();
+                    for (int i = 0; i < chunks.size(); i++) {
+                        File chunk = chunks.get(i);
                         try {
-                            System.out.println("[Executors] Обробка: " + chunk.getName());
-                            TranscriptResult res = audioPipeline.processChunk(chunk, config);
-                            System.out.println("[Executors] Готово: " + chunk.getName());
-                            finalText.append(res.getFullText()).append("\n");
-                        } catch (OrtException e) {
-                            throw new RuntimeException("STT помилка: " + chunk.getName(), e);
+                            onStatus.accept("Обробка чанку (" + (i + 1) + "/" + chunks.size() + "): " + chunk.getName());
+                            TranscriptResult r = audioPipeline.processChunk(chunk, config);
+                            if (r.getFullText() != null && !r.getFullText().isBlank()) {
+                                fullText.append(r.getFullText()).append("\n");
+                            }
+                        } catch (Exception e) {
+                            System.err.println("Помилка обробки чанку " + chunk.getName() + ": " + e.getMessage());
                         } finally {
                             chunk.delete();
                         }
                     }
-
-                    if (!chunks.isEmpty()) {
-                        chunks.get(0).getParentFile().delete();
-                    }
-
-                    return new TranscriptResult(java.util.List.of(), finalText.toString().trim());
-
+                    onStatus.accept("Готово");
+                    return new TranscriptResult(List.of(), fullText.toString().trim());
                 }, sttExecutor);
+    }
+
+    public void shutdown() {
+        ioExecutor.shutdown();
+        sttExecutor.shutdown();
     }
 }

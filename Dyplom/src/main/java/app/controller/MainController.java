@@ -2,9 +2,6 @@ package app.controller;
 
 import app.concurent.AppExecutors;
 import app.model.TranscriptionConfig;
-import app.service.AudioDecoder;
-import app.service.FFmpegConverter;
-import app.service.OnnxWhisperService;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -24,6 +21,7 @@ public class MainController {
             "Medium (Висока якість)","medium"
     );
     private String filePath;
+    private String currentModelPath;
     @FXML
     private TextArea resultText;
     @FXML
@@ -36,10 +34,7 @@ public class MainController {
                 MODEL_MAP.keySet().stream().sorted().toList()
         );
         modelTypeComboBox.setItems(models);
-        modelTypeComboBox.setValue("Small (Хороша якість)");
-        modelTypeComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
-            AppExecutors.getInstance().resetWhisperService();
-        });
+        modelTypeComboBox.setValue("Base (Баланс)");
     }
 
     @FXML
@@ -49,16 +44,20 @@ public class MainController {
             return;
         }
 
-        setUiProcessing(true);
-
         File input = new File(filePath);
-        String modelPrefix = MODEL_MAP.getOrDefault(
-                modelTypeComboBox.getValue(), "small"
-        );
-        String modelBasePath = "models/whisper/whisper-" + modelPrefix;
+        String modelPrefix = MODEL_MAP.getOrDefault(modelTypeComboBox.getValue(), "small");
+        String modelPath = "models/whisper/ggml-" + modelPrefix + ".bin";
+        File modelFile = new File(modelPath);
+        if (!modelFile.exists()) {
+            resultText.setText("Модель не знайдено:\n" + modelPath);
+            resultText.setText("Модель не знайдено:\n" + modelPath);
+            return;
+        }
 
+        setUiProcessing(true);
+        resultText.clear();
         TranscriptionConfig config = new TranscriptionConfig(
-                modelBasePath,
+                modelPath,
                 4,
                 "en",
                 false
