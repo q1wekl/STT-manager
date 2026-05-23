@@ -32,6 +32,7 @@ public class WhisperCppEngine implements SpeechToTextEngine {
                     System.out.println("[WhisperCpp] Linking NVIDIA CUDA Environment...");
                     loadAbsolute(selectedDir.resolve("cudart64_13.dll"));
                     loadAbsolute(selectedDir.resolve("ggml.dll"));
+                    loadAbsolute(selectedDir.resolve("whisper.dll")); // ← додай це
                     break;
                 case "vulkan":
                     System.out.println("[WhisperCpp] Linking Vulkan Compute Shaders...");
@@ -39,6 +40,7 @@ public class WhisperCppEngine implements SpeechToTextEngine {
                     loadAbsolute(selectedDir.resolve("SPIRV-Tools-shared.dll"));
                     loadAbsolute(selectedDir.resolve("glslangd.dll"));
                     loadAbsolute(selectedDir.resolve("ggml.dll"));
+                    loadAbsolute(selectedDir.resolve("whisper.dll")); // ← і тут
                     break;
                 case "cpu":
                 default:
@@ -56,11 +58,9 @@ public class WhisperCppEngine implements SpeechToTextEngine {
 
     public WhisperCppEngine(String modelPath) {
         try {
-            // 1. Створюємо об'єкт Path
             Path absoluteModelPath = Path.of(modelPath).toAbsolutePath();
             System.out.println("[WhisperCpp] Booting core context with model: " + absoluteModelPath);
 
-            // 2. Перевіряємо, чи фізично існує файл моделі
             java.io.File modelFile = absoluteModelPath.toFile();
             if (!modelFile.exists()) {
                 System.err.println("[WhisperCpp] CRITICAL ERROR: Model file NOT FOUND at: " + absoluteModelPath);
@@ -69,9 +69,11 @@ public class WhisperCppEngine implements SpeechToTextEngine {
                 System.out.println("[WhisperCpp] Model file found. Size: " + (modelFile.length() / 1024 / 1024) + " MB");
             }
 
-            // 3. ВИПРАВЛЕННЯ: Передаємо об'єкт Path (а не String), як того вимагає компілятор
-            this.context = whisper.init(absoluteModelPath);
+            WhisperContextParams contextParams = new WhisperContextParams();
+            contextParams.useGPU = !backend_mode.equalsIgnoreCase("cpu");
 
+            this.context = whisper.init(absoluteModelPath, contextParams); // Path + params ✓
+            System.out.println("CUDA enabled: " + contextParams.useGPU);
             if (this.context == null) {
                 throw new RuntimeException("C++ engine returned NULL context pointer. Model might be corrupted.");
             }
@@ -86,16 +88,12 @@ public class WhisperCppEngine implements SpeechToTextEngine {
         if (path.toFile().exists()) {
             try {
                 Runtime.getRuntime().load(path.toString());
-                System.out.println("  [OK] Loaded: " + path.getFileName());
+                System.out.println("  [OK] Loaded: " + path.getFileName() + " | size: " + path.toFile().length() / 1024 + " KB");
             } catch (Throwable t) {
-                System.out.println("  [Warning] JNI System skipped loading " + path.getFileName() + ": " + t.getMessage());
+                System.out.println("  [FAIL] " + path.getFileName() + ": " + t.getMessage());
             }
         } else {
-            if (path.getFileName().toString().contains("whisper-jni")) {
-                System.err.println("  [CRITICAL ERROR] Core binary file is missing: " + path.getFileName());
-            } else {
-                System.out.println("  [Optional/Skipped] Not found in directory (Using OS Fallback): " + path.getFileName());
-            }
+            System.err.println("  [MISSING] " + path.toAbsolutePath());
         }
     }
     @Override
