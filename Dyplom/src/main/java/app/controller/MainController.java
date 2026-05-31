@@ -12,29 +12,50 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class MainController {
-    private static final java.util.Map<String, String> MODEL_MAP = java.util.Map.of(
-            "Tiny (Швидка)",        "tiny",
-            "Base (Баланс)",        "base",
-            "Small (Хороша якість)", "small",
-            "Medium (Висока якість)","medium"
-    );
+    private static final Map<String, String> MODEL_MAP = new LinkedHashMap<>();
+    static {
+        MODEL_MAP.put("Tiny (Швидка)", "tiny");
+        MODEL_MAP.put("Base (Баланс)", "base");
+        MODEL_MAP.put("Small (Хороша якість)", "small");
+        MODEL_MAP.put("Medium (Висока якість)", "medium");
+        MODEL_MAP.put("Large (Максимальна якість)", "large");
+
+    }
+    private static final Map<String, String> LANGUAGE_MAP = new LinkedHashMap<>();
+    static {
+        LANGUAGE_MAP.put("Auto", "auto");
+        LANGUAGE_MAP.put("Ukrainian", "uk");
+        LANGUAGE_MAP.put("English", "en");
+        LANGUAGE_MAP.put("Polish", "pl");
+        LANGUAGE_MAP.put("German", "de");
+        LANGUAGE_MAP.put("French", "fr");
+        LANGUAGE_MAP.put("Spanish", "es");
+        LANGUAGE_MAP.put("Italian", "it");
+        LANGUAGE_MAP.put("Japanese", "ja");
+    }
+
     private String filePath;
-    private String currentModelPath;
     @FXML
     private TextArea resultText;
     @FXML
     private ComboBox<String> modelTypeComboBox;
+    @FXML
+    private ComboBox<String> languageComboBox;
     @FXML private Button speechToTextButton;
 
     @FXML
     public void initialize() {
-        ObservableList<String> models = FXCollections.observableArrayList(
-                MODEL_MAP.keySet().stream().sorted().toList()
-        );
+        ObservableList<String> models = FXCollections.observableArrayList(MODEL_MAP.keySet().stream().sorted().toList());
         modelTypeComboBox.setItems(models);
         modelTypeComboBox.setValue("Base (Баланс)");
+
+        ObservableList<String> languages = FXCollections.observableArrayList(LANGUAGE_MAP.keySet());
+        languageComboBox.setItems(languages);
+        languageComboBox.setValue("Auto");
     }
 
     @FXML
@@ -47,6 +68,28 @@ public class MainController {
         File input = new File(filePath);
         String modelPrefix = MODEL_MAP.getOrDefault(modelTypeComboBox.getValue(), "small");
         String modelPath = "models/whisper/ggml-" + modelPrefix + ".bin";
+        String language = LANGUAGE_MAP.getOrDefault(languageComboBox.getValue(), "auto");
+
+        int threads;
+        switch (modelPrefix) {
+            case "tiny":
+            case "base":
+                threads = 2;
+                break;
+
+            case "small":
+            case "medium":
+                threads = 3;
+                break;
+
+            case "large":
+                threads = 4;
+                break;
+
+            default:
+                threads = 3;
+        }
+
         File modelFile = new File(modelPath);
         if (!modelFile.exists()) {
             resultText.setText("Модель не знайдено:\n" + modelPath);
@@ -56,27 +99,18 @@ public class MainController {
 
         setUiProcessing(true);
         resultText.clear();
-        TranscriptionConfig config = new TranscriptionConfig(
-                modelPath,
-                4,
-                "en",
-                false
-        );
+        TranscriptionConfig config = new TranscriptionConfig(modelPath, threads, language, false);
         System.out.println("[Controller] Викликаємо supplySpeechToText");
-        AppExecutors.getInstance()
-                .supplySpeechToText(input, config, this::updateStatus)  // ← передаємо callback
-                .thenAccept(result -> {
+        System.out.println("[Whisper] Using quantized model (Q5): " + modelPath);
+        AppExecutors.getInstance().supplySpeechToText(input, config, this::updateStatus).thenAccept(result -> {
                     javafx.application.Platform.runLater(() -> {
                         String text = result.getFullText();
-                        resultText.setText(
-                                (text == null || text.isBlank()) ? "Текст не розпізнано" : text
-                        );
+                        resultText.setText((text == null || text.isBlank()) ? "Текст не розпізнано" : text);
                         setUiProcessing(false);
                     });
                 })
                 .exceptionally(ex -> {
                     javafx.application.Platform.runLater(() -> {
-                        // getCause() бо CompletableFuture обгортає в CompletionException
                         Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
                         resultText.setText("Помилка:\n" + cause.getMessage());
                         setUiProcessing(false);
@@ -110,6 +144,7 @@ public class MainController {
         javafx.application.Platform.runLater(() -> {
             speechToTextButton.setDisable(isProcessing);
             modelTypeComboBox.setDisable(isProcessing);
+            languageComboBox.setDisable(isProcessing);
         });
     }
 

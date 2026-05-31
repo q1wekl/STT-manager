@@ -16,16 +16,20 @@
 
     <!-- Центр -->
     <center>
-        <VBox alignment="CENTER" prefHeight="571.0" prefWidth="621.0" spacing="10">
-            <Button fx:id="fileSelectionButton" onAction="#handleOpenFile" text="Обрати файл" />
-            <Button fx:id="speechToTextButton" onAction="#speechToText" text="Перетворити Аудіо в файл" />
-        </VBox>
+        <VBox alignment="CENTER" prefHeight="570.0" prefWidth="620.0" spacing="10" />
     </center>
    <right>
       <TextArea fx:id="resultText" editable="false" prefHeight="571.0" prefWidth="424.0" wrapText="true" BorderPane.alignment="CENTER" />
    </right>
    <left>
-      <ComboBox fx:id="modelTypeComboBox" prefWidth="150.0" visibleRowCount="5" BorderPane.alignment="CENTER" />
+      <VBox alignment="CENTER" prefHeight="500.0" prefWidth="200.0" spacing="10.0">
+         <children>
+            <ComboBox fx:id="languageComboBox" prefWidth="150.0" promptText="Мова" visibleRowCount="5" />
+            <ComboBox fx:id="modelTypeComboBox" prefWidth="150.0" promptText="Тип моделі" visibleRowCount="5" />
+               <Button fx:id="fileSelectionButton" onAction="#handleOpenFile" text="Обрати файл" />
+               <Button fx:id="speechToTextButton" onAction="#speechToText" text="Перетворити Аудіо в файл" />
+         </children>
+      </VBox>
    </left>
 
 </BorderPane>

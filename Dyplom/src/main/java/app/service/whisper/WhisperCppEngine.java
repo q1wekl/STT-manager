@@ -32,7 +32,7 @@ public class WhisperCppEngine implements SpeechToTextEngine {
                     System.out.println("[WhisperCpp] Linking NVIDIA CUDA Environment...");
                     loadAbsolute(selectedDir.resolve("cudart64_13.dll"));
                     loadAbsolute(selectedDir.resolve("ggml.dll"));
-                    loadAbsolute(selectedDir.resolve("whisper.dll")); // ← додай це
+                    loadAbsolute(selectedDir.resolve("whisper.dll"));
                     break;
                 case "vulkan":
                     System.out.println("[WhisperCpp] Linking Vulkan Compute Shaders...");
@@ -40,7 +40,7 @@ public class WhisperCppEngine implements SpeechToTextEngine {
                     loadAbsolute(selectedDir.resolve("SPIRV-Tools-shared.dll"));
                     loadAbsolute(selectedDir.resolve("glslangd.dll"));
                     loadAbsolute(selectedDir.resolve("ggml.dll"));
-                    loadAbsolute(selectedDir.resolve("whisper.dll")); // ← і тут
+                    loadAbsolute(selectedDir.resolve("whisper.dll"));
                     break;
                 case "cpu":
                 default:
@@ -72,7 +72,7 @@ public class WhisperCppEngine implements SpeechToTextEngine {
             WhisperContextParams contextParams = new WhisperContextParams();
             contextParams.useGPU = !backend_mode.equalsIgnoreCase("cpu");
 
-            this.context = whisper.init(absoluteModelPath, contextParams); // Path + params ✓
+            this.context = whisper.init(absoluteModelPath, contextParams);
             System.out.println("CUDA enabled: " + contextParams.useGPU);
             if (this.context == null) {
                 throw new RuntimeException("C++ engine returned NULL context pointer. Model might be corrupted.");
@@ -104,8 +104,12 @@ public class WhisperCppEngine implements SpeechToTextEngine {
         List<TranscriptSegment> segmentsList= new ArrayList<>();
         WhisperFullParams params = new WhisperFullParams();
 
-        params.nThreads = 1;
-        params.language = config.getLanguage();
+        params.nThreads = config.getThreads();;
+        if ("auto".equalsIgnoreCase(config.getLanguage())) {
+            params.language = null;
+        } else {
+            params.language = config.getLanguage();
+        }
 
 
         int result = whisper.full(context, params, audio, audio.length);

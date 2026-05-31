@@ -3,7 +3,9 @@ package app.service;
 import java.io.File;
 
 public class AudioDecoder {
+
     public float[] decode(File wavFile) {
+
         try {
             ProcessBuilder pb = new ProcessBuilder(
                     "bin/ffmpeg.exe",
@@ -16,16 +18,13 @@ public class AudioDecoder {
             );
 
             Process process = pb.start();
-
             byte[] bytes = process.getInputStream().readAllBytes();
             process.waitFor();
-
             int samples = bytes.length / 4;
             float[] audio = new float[samples];
 
             for (int i = 0; i < samples; i++) {
                 int j = i * 4;
-
                 int asInt =
                         (bytes[j] & 0xff) |
                                 ((bytes[j + 1] & 0xff) << 8) |

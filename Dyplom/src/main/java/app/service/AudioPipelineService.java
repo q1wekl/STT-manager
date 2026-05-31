@@ -1,5 +1,6 @@
 package app.service;
 
+import app.model.AudioChunk;
 import app.model.TranscriptResult;
 import app.model.TranscriptionConfig;
 import app.service.whisper.SpeechToTextEngine;
@@ -17,16 +18,13 @@ public class AudioPipelineService {
         this.engines = ThreadLocal.withInitial(() -> new WhisperCppEngine(modelPath));
     }
 
-    public TranscriptResult processChunk(File wavChunk, TranscriptionConfig config) {
-
-        float[] audio = decoder.decode(wavChunk);
-
+    public TranscriptResult processChunk(AudioChunk chunk, TranscriptionConfig config) {
+        float[] audio = chunk.getSamples();
         if (isSilent(audio)) {
             return new TranscriptResult(java.util.List.of(), "");
         }
 
         SpeechToTextEngine engine = engines.get();
-
         try {
             return engine.transcribe(audio, config);
         } catch (Exception e) {
@@ -36,11 +34,9 @@ public class AudioPipelineService {
 
     private boolean isSilent(float[] audio) {
         double energy = 0.0;
-
         for (float v : audio) {
             energy += v * v;
         }
-
         double rms = Math.sqrt(energy / audio.length);
 
         return rms < 0.005;
