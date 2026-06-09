@@ -16,71 +16,77 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WhisperCppEngine implements SpeechToTextEngine {
-    private static final WhisperJNI whisper;
+    private final WhisperJNI whisper;
     private WhisperContext context;
-    // modes: "cpu", "vulkan", "cuda"
-    private static final String backend_mode = "cuda";
-    static {
+    private final String backendMode;
+
+    public WhisperCppEngine(String modelPath, String backendMode) {
+        this.backendMode = resolveBackendMode(backendMode);;
+
         try {
             Path baseNativeDir = Paths.get("native").toAbsolutePath();
-            Path selectedDir = baseNativeDir.resolve(backend_mode.toLowerCase());
+            Path selectedDir = baseNativeDir.resolve(this.backendMode);
+
             loadAbsolute(selectedDir.resolve("vcruntime140.dll"));
             loadAbsolute(selectedDir.resolve("msvcp140.dll"));
 
-            switch (backend_mode.toLowerCase()) {
+            switch (this.backendMode) {
                 case "cuda":
-                    System.out.println("[WhisperCpp] Linking NVIDIA CUDA Environment...");
                     loadAbsolute(selectedDir.resolve("cudart64_13.dll"));
                     loadAbsolute(selectedDir.resolve("ggml.dll"));
                     loadAbsolute(selectedDir.resolve("whisper.dll"));
                     break;
+
                 case "vulkan":
-                    System.out.println("[WhisperCpp] Linking Vulkan Compute Shaders...");
                     loadAbsolute(selectedDir.resolve("vulkan-1.dll"));
                     loadAbsolute(selectedDir.resolve("SPIRV-Tools-shared.dll"));
                     loadAbsolute(selectedDir.resolve("glslangd.dll"));
                     loadAbsolute(selectedDir.resolve("ggml.dll"));
                     loadAbsolute(selectedDir.resolve("whisper.dll"));
                     break;
+
                 case "cpu":
+                case "auto":
                 default:
-                    System.out.println("[WhisperCpp] Linking Clean CPU Architecture...");
                     break;
             }
+
             loadAbsolute(selectedDir.resolve("whisper-jni.dll"));
 
-            whisper = new WhisperJNI();
-            System.out.println("[WhisperCpp] JNI Bridge successfully linked with whisper-jni.dll!");
-        } catch (Exception e) {
-            throw new RuntimeException("Error loading native libraries: " + e.getMessage(), e);
-        }
-    }
-
-    public WhisperCppEngine(String modelPath) {
-        try {
+            this.whisper = new WhisperJNI();
             Path absoluteModelPath = Path.of(modelPath).toAbsolutePath();
-            System.out.println("[WhisperCpp] Booting core context with model: " + absoluteModelPath);
-
-            java.io.File modelFile = absoluteModelPath.toFile();
-            if (!modelFile.exists()) {
-                System.err.println("[WhisperCpp] CRITICAL ERROR: Model file NOT FOUND at: " + absoluteModelPath);
-                throw new java.io.FileNotFoundException("Model file missing!");
-            } else {
-                System.out.println("[WhisperCpp] Model file found. Size: " + (modelFile.length() / 1024 / 1024) + " MB");
-            }
 
             WhisperContextParams contextParams = new WhisperContextParams();
-            contextParams.useGPU = !backend_mode.equalsIgnoreCase("cpu");
-
+            contextParams.useGPU = this.backendMode.equals("cuda") || this.backendMode.equals("vulkan");
             this.context = whisper.init(absoluteModelPath, contextParams);
-            System.out.println("CUDA enabled: " + contextParams.useGPU);
+
             if (this.context == null) {
-                throw new RuntimeException("C++ engine returned NULL context pointer. Model might be corrupted.");
+                throw new RuntimeException("Context init failed");
             }
 
-            System.out.println("[WhisperCpp] Success! Whisper engine context is alive and ready for chunks.");
         } catch (Exception e) {
-            throw new RuntimeException("Failure initializing Whisper context: " + e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
+    }
+    private static String resolveBackendMode(String mode) {
+
+        if (mode == null) {
+            return "cpu";
+        }
+
+        switch (mode.toLowerCase()) {
+
+            case "auto":
+                return "cpu";
+            case "auto_gpu":
+                if (java.nio.file.Files.exists(java.nio.file.Paths.get("native", "cuda"))) {
+                    return "cuda";
+                }
+                if (java.nio.file.Files.exists(java.nio.file.Paths.get("native", "vulkan"))) {
+                    return "vulkan";
+                }
+                return "cpu";
+            default: return mode.toLowerCase();
         }
     }
 

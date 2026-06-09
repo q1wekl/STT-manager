@@ -6,16 +6,11 @@ import app.model.TranscriptionConfig;
 import app.service.whisper.SpeechToTextEngine;
 import app.service.whisper.WhisperCppEngine;
 
-import java.io.File;
-
 public class AudioPipelineService {
 
     private final AudioDecoder decoder = new AudioDecoder();
 
-    private final ThreadLocal<SpeechToTextEngine> engines;
-
     public AudioPipelineService(String modelPath) {
-        this.engines = ThreadLocal.withInitial(() -> new WhisperCppEngine(modelPath));
     }
 
     public TranscriptResult processChunk(AudioChunk chunk, TranscriptionConfig config) {
@@ -23,8 +18,8 @@ public class AudioPipelineService {
         if (isSilent(audio)) {
             return new TranscriptResult(java.util.List.of(), "");
         }
+        SpeechToTextEngine engine = new WhisperCppEngine(config.getModelPath(), config.getAccelerationMode());
 
-        SpeechToTextEngine engine = engines.get();
         try {
             return engine.transcribe(audio, config);
         } catch (Exception e) {

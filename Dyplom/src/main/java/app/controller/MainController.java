@@ -25,6 +25,14 @@ public class MainController {
         MODEL_MAP.put("Large (Максимальна якість)", "large");
 
     }
+    private static final Map<String, String> ACCELERATION_MAP = new LinkedHashMap<>();
+    static {
+        ACCELERATION_MAP.put("Auto", "auto");
+        ACCELERATION_MAP.put("CPU", "cpu");
+        ACCELERATION_MAP.put("GPU (Auto detect)", "auto_gpu");
+        ACCELERATION_MAP.put("CUDA", "cuda");
+        ACCELERATION_MAP.put("Vulkan", "vulkan");
+    }
     private static final Map<String, String> LANGUAGE_MAP = new LinkedHashMap<>();
     static {
         LANGUAGE_MAP.put("Auto", "auto");
@@ -39,6 +47,8 @@ public class MainController {
     }
 
     private String filePath;
+    @FXML
+    private ComboBox<String> accelerationComboBox;
     @FXML
     private TextArea resultText;
     @FXML
@@ -56,6 +66,10 @@ public class MainController {
         ObservableList<String> languages = FXCollections.observableArrayList(LANGUAGE_MAP.keySet());
         languageComboBox.setItems(languages);
         languageComboBox.setValue("Auto");
+
+        ObservableList<String> accelerations = FXCollections.observableArrayList(ACCELERATION_MAP.keySet());
+        accelerationComboBox.setItems(accelerations);
+        accelerationComboBox.setValue("Auto");
     }
 
     @FXML
@@ -69,6 +83,7 @@ public class MainController {
         String modelPrefix = MODEL_MAP.getOrDefault(modelTypeComboBox.getValue(), "small");
         String modelPath = "models/whisper/ggml-" + modelPrefix + ".bin";
         String language = LANGUAGE_MAP.getOrDefault(languageComboBox.getValue(), "auto");
+        String acceleration = ACCELERATION_MAP.getOrDefault(accelerationComboBox.getValue(), "auto");
 
         int threads;
         switch (modelPrefix) {
@@ -99,9 +114,7 @@ public class MainController {
 
         setUiProcessing(true);
         resultText.clear();
-        TranscriptionConfig config = new TranscriptionConfig(modelPath, threads, language, false);
-        System.out.println("[Controller] Викликаємо supplySpeechToText");
-        System.out.println("[Whisper] Using quantized model (Q5): " + modelPath);
+        TranscriptionConfig config = new TranscriptionConfig(acceleration,language,threads,modelPath,false);
         AppExecutors.getInstance().supplySpeechToText(input, config, this::updateStatus).thenAccept(result -> {
                     javafx.application.Platform.runLater(() -> {
                         String text = result.getFullText();

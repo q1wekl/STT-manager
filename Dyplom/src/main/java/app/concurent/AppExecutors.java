@@ -1,17 +1,15 @@
 package app.concurent;
 
-import app.model.AudioChunk;
-import app.model.TranscriptResult;
-import app.model.TranscriptSegment;
-import app.model.TranscriptionConfig;
+import app.model.*;
 import app.service.*;
+import app.service.whisper.SpeechToTextEngine;
+import app.service.whisper.WhisperCppEngine;
+
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 public class AppExecutors {
 
@@ -26,6 +24,7 @@ public class AppExecutors {
 
     private final AudioDecoder decoder = new AudioDecoder();
     private final AudioChunkerService chunker = new AudioChunkerService();
+
 
     public static AppExecutors getInstance() {
         return instance;
@@ -45,37 +44,55 @@ public class AppExecutors {
             Consumer<String> onStatus
     ) {
         return CompletableFuture.supplyAsync(() -> {
-                    onStatus.accept("Підготовка аудіо...");
-                    FFmpegConverter ffmpeg = new FFmpegConverter();
-                    File wavFile = ffmpeg.convertToWav(inputFile);
-                    float[] audio = decoder.decode(wavFile);
-                    List<AudioChunk> chunks= chunker.createChunks(audio,25,2);
+            onStatus.accept("Підготовка аудіо...");
+
+            try {
+                FFmpegConverter ffmpeg = new FFmpegConverter();
+                File wavFile = ffmpeg.convertToWav(inputFile);
+
+                SilenceDetectorService detector = new SilenceDetectorService();
+                detector.detect(wavFile);
+
+                onStatus.accept("Ініціалізація engine...");
+
+                SpeechToTextEngine engine =
+                        new WhisperCppEngine(
+                                config.getModelPath(),
+                                config.getAccelerationMode()
+                        );
+
+                ResultManager manager =
+                        new ResultManager(engine, config, onStatus);
+
+                AudioChunkProducer producer =
+                        new AudioChunkProducer(
+                                wavFile,
+                                manager.getChunkQueue(),
+                                decoder,
+                                chunker,
+                                detector
+                        );
+
+                onStatus.accept("Запуск паралельної обробки...");
+
+                TranscriptResult result = manager.process(wavFile, producer);
+
+                if (wavFile.exists()) {
                     wavFile.delete();
-                    onStatus.accept("Чанків: " + chunks.size());
-                    return chunks;
-                }, ioExecutor).thenApplyAsync(chunks -> {
-                    ensurePipeline(config.getModelPath());
-                    String mergedText = "";
-                    for (int i = 0; i < chunks.size(); i++) {
-                        AudioChunk chunk = chunks.get(i);
-                        try {
-                            onStatus.accept("Обробка чанку (" + (i + 1) + "/" + chunks.size() + "): Chunk " + (i + 1));
-                            TranscriptResult r = audioPipeline.processChunk(chunk, config);
-                            String chunkText = r.getFullText();
-                            if (chunkText != null && !chunkText.isBlank()) {
-                                mergedText = merger.merge(mergedText, chunkText);
-                            }
-                        } catch (Exception e) {
-                            System.err.println("Помилка обробки чанку Chunk " + (i + 1) + ": " + e.getMessage());
-                        }
-                    }
-                    onStatus.accept("Готово");
-                    return new TranscriptResult(List.of(), mergedText.trim());
-                }, sttExecutor);
+                }
+
+                return result;
+
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }, ioExecutor);
     }
 
     public void shutdown() {
-        ioExecutor.shutdown();
-        sttExecutor.shutdown();
+        System.out.println("Shutting down AppExecutors");
+
+        ioExecutor.shutdownNow();
+        sttExecutor.shutdownNow();
     }
 }

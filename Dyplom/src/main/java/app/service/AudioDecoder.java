@@ -3,12 +3,13 @@ package app.service;
 import java.io.File;
 
 public class AudioDecoder {
+    private final String ffmpegPath = "bin/ffmpeg.exe";
 
     public float[] decode(File wavFile) {
 
         try {
             ProcessBuilder pb = new ProcessBuilder(
-                    "bin/ffmpeg.exe",
+                    ffmpegPath,
                     "-i", wavFile.getAbsolutePath(),
                     "-f", "f32le",
                     "-acodec", "pcm_f32le",

@@ -1,6 +1,8 @@
 package app;
 
+import app.concurent.AppExecutors;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -18,11 +20,23 @@ public class Main extends Application{
         );
 
         Scene scene = new Scene(loader.load());
+
         stage.setScene(scene);
         stage.setMaximized(true);
+
+        stage.setOnCloseRequest(event -> {
+            System.out.println("Application closing...");
+            AppExecutors.getInstance().shutdown();
+            Platform.exit();
+            System.exit(0);
+        });
+
         stage.show();
-
-
+    }
+    @Override
+    public void stop() {
+        System.out.println("JavaFX stop()");
+        AppExecutors.getInstance().shutdown();
     }
 
     public static void main(String[] args) throws IOException {

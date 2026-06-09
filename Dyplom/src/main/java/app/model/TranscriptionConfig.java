@@ -5,11 +5,13 @@ public class TranscriptionConfig {
     private final int threads;
     private final String language;
     private final boolean speedUp;
+    private String accelerationMode;
 
-    public TranscriptionConfig(String modelPath, int threads, String language, boolean speedUp) {
-        this.modelPath = modelPath;
-        this.threads = threads;
+    public TranscriptionConfig(String accelerationMode, String language, int threads, String modelPath, boolean speedUp) {
+        this.accelerationMode = accelerationMode;
         this.language = language;
+        this.threads = threads;
+        this.modelPath = modelPath;
         this.speedUp = speedUp;
     }
 
@@ -28,4 +30,6 @@ public class TranscriptionConfig {
     public boolean isSpeedUp() {
         return speedUp;
     }
+
+    public String getAccelerationMode() {return accelerationMode;}
 }

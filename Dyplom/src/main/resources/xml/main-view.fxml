@@ -26,8 +26,9 @@
          <children>
             <ComboBox fx:id="languageComboBox" prefWidth="150.0" promptText="Мова" visibleRowCount="5" />
             <ComboBox fx:id="modelTypeComboBox" prefWidth="150.0" promptText="Тип моделі" visibleRowCount="5" />
+            <ComboBox fx:id="accelerationComboBox" prefWidth="150.0" promptText="Режим роботи" visibleRowCount="5" />
                <Button fx:id="fileSelectionButton" onAction="#handleOpenFile" text="Обрати файл" />
-               <Button fx:id="speechToTextButton" onAction="#speechToText" text="Перетворити Аудіо в файл" />
+               <Button fx:id="speechToTextButton" onAction="#speechToText" text="Перетворити Аудіо в текст" />
          </children>
       </VBox>
    </left>
