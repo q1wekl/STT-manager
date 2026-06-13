@@ -1,6 +1,8 @@
 package app.service;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class FFmpegConverter {
 
@@ -32,5 +34,21 @@ public class FFmpegConverter {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+    public File convertToMp3(File inputFile) throws Exception {
+        Path output = Files.createTempFile("audio_export_", ".mp3");
+        ProcessBuilder pb = new ProcessBuilder(
+                ffmpegPath, "-y",
+                "-i", inputFile.getAbsolutePath(),
+                "-q:a", "2",
+                output.toString()
+        );
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+        int code = process.waitFor();
+        if (code != 0) {
+            throw new RuntimeException("FFmpeg failed with code: " + code);
+        }
+        return output.toFile();
     }
 }

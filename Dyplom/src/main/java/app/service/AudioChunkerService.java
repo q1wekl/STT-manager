@@ -63,7 +63,7 @@ public class AudioChunkerService {
                             + "s"
             );
 
-            chunks.add(new AudioChunk(chunk, startMs,endMs));
+            chunks.add(new AudioChunk(chunk, startMs, endMs, chunks.size()));
             chunkStartSec= cutSec;
         }
         return chunks;

@@ -107,16 +107,15 @@ public class WhisperCppEngine implements SpeechToTextEngine {
         if (context == null) {
             throw new IllegalStateException("Whisper context is closed");
         }
-        List<TranscriptSegment> segmentsList= new ArrayList<>();
+        List<TranscriptSegment> segmentsList = new ArrayList<>();
         WhisperFullParams params = new WhisperFullParams();
 
-        params.nThreads = config.getThreads();;
+        params.nThreads = Math.max(1, Runtime.getRuntime().availableProcessors() / 2);
         if ("auto".equalsIgnoreCase(config.getLanguage())) {
             params.language = null;
         } else {
             params.language = config.getLanguage();
         }
-
 
         int result = whisper.full(context, params, audio, audio.length);
         if (result != 0) {
@@ -132,7 +131,7 @@ public class WhisperCppEngine implements SpeechToTextEngine {
             segmentsList.add(new TranscriptSegment(text, t0, t1));
             fullText.append(text).append("\n");
         }
-        return new TranscriptResult(segmentsList, fullText.toString().trim());
+        return new TranscriptResult(segmentsList, fullText.toString().trim(), -1);
     }
 
     @Override

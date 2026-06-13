@@ -1,52 +1,42 @@
 package app.concurent;
 
-import app.model.AudioChunk;
-import app.model.TranscriptResult;
-import app.model.TranscriptSegment;
-import app.model.TranscriptionConfig;
+import app.model.*;
 import app.service.whisper.SpeechToTextEngine;
 import app.service.whisper.WhisperCppEngine;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.function.Consumer;
 
 public class ResultManager {
 
-    private final Consumer<String> onStatus;
-
+    private final ProgressListener onStatus;
     private final BlockingQueue<AudioChunk> chunkQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<TranscriptResult> resultQueue = new LinkedBlockingQueue<>();
-
-    private final SpeechToTextEngine engine;
     private final TranscriptionConfig config;
-
-    private final int consumerCount = 2;
-    private final ExecutorService pool = Executors.newFixedThreadPool(consumerCount);
-
+    private final int consumerCount;
+    private final ExecutorService pool;
+    private final ModelConfig modelConfig;
     private int totalChunks;
     private int completedChunks = 0;
 
-    public ResultManager(SpeechToTextEngine engine, TranscriptionConfig config, Consumer<String> onStatus) {
-        this.engine = engine;
+
+    public ResultManager(TranscriptionConfig config, ProgressListener onStatus) {
         this.config = config;
         this.onStatus = onStatus;
+        this.modelConfig = ModelConfig.of(config.getModelId());
+        this.consumerCount = modelConfig.consumerCount;
+        this.pool = Executors.newFixedThreadPool(consumerCount);
     }
 
     public TranscriptResult process(File wavFile, AudioChunkProducer producer) throws Exception {
+        String modelPath = modelConfig.path;
+
         for (int i = 0; i < consumerCount; i++) {
-
-            SpeechToTextEngine engine = new WhisperCppEngine(config.getModelPath(), config.getAccelerationMode());
-
-            pool.submit(new AudioChunkConsumer(
-                    chunkQueue,
-                    resultQueue,
-                    engine,
-                    config,
-                    onStatus
-            ));
+            SpeechToTextEngine engine = new WhisperCppEngine(modelPath, config.getAccelerationMode());
+            pool.submit(new AudioChunkConsumer(chunkQueue, resultQueue, engine, config));
         }
 
         int count = producer.call();
@@ -56,23 +46,25 @@ public class ResultManager {
             chunkQueue.put(AudioChunk.poison);
         }
 
-        List<TranscriptSegment> allSegments = new ArrayList<>();
-        StringBuilder fullText = new StringBuilder();
-        StringBuilder result = new StringBuilder();
-        int finished = 0;
-
-        while (completedChunks < totalChunks) {
-            TranscriptResult tr = resultQueue.take();
+        List<TranscriptResult> results = new ArrayList<>();
+        while (results.size() < totalChunks) {
+            results.add(resultQueue.take());
             completedChunks++;
-            onStatus.accept("Оброблено чанків: " + completedChunks + "/" + totalChunks);
-
-            allSegments.addAll(tr.getSegments());
-            fullText.append(tr.getFullText()).append("\n");
+            onStatus.onProgress("Оброблено сегменти", completedChunks, totalChunks);
         }
 
         pool.shutdown();
+        pool.awaitTermination(1, TimeUnit.MINUTES);
 
-        return new TranscriptResult(allSegments, fullText.toString().trim());
+        results.sort(Comparator.comparingInt(TranscriptResult::getChunkIndex));
+
+        List<TranscriptSegment> allSegments = new ArrayList<>();
+        StringBuilder fullText = new StringBuilder();
+        for (TranscriptResult tr : results) {
+            allSegments.addAll(tr.getSegments());
+            fullText.append(tr.getFullText()).append("\n");
+        }
+        return new TranscriptResult(allSegments, fullText.toString().trim(), -1);
     }
 
     public BlockingQueue<AudioChunk> getChunkQueue() {

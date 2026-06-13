@@ -22,7 +22,7 @@ public class Main extends Application{
         Scene scene = new Scene(loader.load());
 
         stage.setScene(scene);
-        stage.setMaximized(true);
+       // stage.setMaximized(true);
 
         stage.setOnCloseRequest(event -> {
             System.out.println("Application closing...");

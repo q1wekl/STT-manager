@@ -1,36 +1,119 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ButtonBar?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Box?>
 
-<BorderPane xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="app.controller.MainController">
-
-    <!-- Верх -->
-    <top>
-        <Label prefHeight="30.0" prefWidth="85.0" text="Мій застосунок" BorderPane.alignment="CENTER" />
-    </top>
-
-    <!-- Центр -->
+<BorderPane prefHeight="650.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="app.controller.MainController">
     <center>
-        <VBox alignment="CENTER" prefHeight="570.0" prefWidth="620.0" spacing="10" />
+        <VBox prefHeight="571.0" prefWidth="559.0" BorderPane.alignment="CENTER">
+            <children>
+                <TextArea fx:id="resultText" prefHeight="571.0" prefWidth="157.0" promptText="Тут з'явиться розпізнаний текст" wrapText="true" />
+                <Separator prefWidth="200.0" />
+                <VBox prefHeight="27.0" prefWidth="266.0" />
+            </children>
+        </VBox>
     </center>
-   <right>
-      <TextArea fx:id="resultText" editable="false" prefHeight="571.0" prefWidth="424.0" wrapText="true" BorderPane.alignment="CENTER" />
-   </right>
-   <left>
-      <VBox alignment="CENTER" prefHeight="500.0" prefWidth="200.0" spacing="10.0">
-         <children>
-            <ComboBox fx:id="languageComboBox" prefWidth="150.0" promptText="Мова" visibleRowCount="5" />
-            <ComboBox fx:id="modelTypeComboBox" prefWidth="150.0" promptText="Тип моделі" visibleRowCount="5" />
-            <ComboBox fx:id="accelerationComboBox" prefWidth="150.0" promptText="Режим роботи" visibleRowCount="5" />
-               <Button fx:id="fileSelectionButton" onAction="#handleOpenFile" text="Обрати файл" />
-               <Button fx:id="speechToTextButton" onAction="#speechToText" text="Перетворити Аудіо в текст" />
-         </children>
-      </VBox>
-   </left>
+    <top>
+        <HBox alignment="BOTTOM_LEFT" prefHeight="51.0" prefWidth="800.0" BorderPane.alignment="CENTER">
+            <children>
+                <Box depth="100" height="100" width="100" />
+                <Label text="Application" />
+                <Box depth="100" height="100" width="400.0" />
+                <Label fx:id="statusLabel" text="Статус" />
+            </children></HBox>
+    </top>
+    <bottom>
+        <HBox prefHeight="54.0" prefWidth="800.0" BorderPane.alignment="CENTER">
+            <children>
+                <Box depth="100" height="50.0" width="120.0" />
+                <VBox alignment="CENTER" prefHeight="59.0" prefWidth="362.0">
+                    <children>
+                        <ProgressBar fx:id="chunkProgressBar" maxWidth="1.7976931348623157E308" prefWidth="200.0" progress="0.0" />
+                        <Label fx:id="chunkCountLabel" text="Чанки" />
+                    </children>
+                </VBox>
+                <ButtonBar prefHeight="51.0" prefWidth="336.0">
+                    <buttons>
+                        <Button fx:id="cleanTextButton" mnemonicParsing="false" onAction="#handleClear" prefHeight="34.0" prefWidth="150.0" text="Очистити текст" />
+                        <Button fx:id="saveAsButton" mnemonicParsing="false" onAction="#handleSaveAs" prefHeight="34.0" prefWidth="150.0" text="Зберегти текст" />
+                    </buttons>
+                </ButtonBar>
+            </children>
+        </HBox>
+    </bottom>
+    <left>
+        <VBox prefHeight="474.0" prefWidth="243.0" spacing="10.0" BorderPane.alignment="TOP_CENTER">
+            <children>
+                <VBox alignment="CENTER" prefHeight="200.0" prefWidth="100.0" spacing="12.0">
+                    <children>
+                        <ComboBox fx:id="languageComboBox" nodeOrientation="LEFT_TO_RIGHT" prefHeight="30.0" prefWidth="160.0" promptText="Мова" visibleRowCount="5" />
+                        <ComboBox fx:id="modelTypeComboBox" prefHeight="30.0" prefWidth="160.0" promptText="Тип моделі" visibleRowCount="5" />
+                        <ComboBox fx:id="accelerationComboBox" prefHeight="30.0" prefWidth="160.0" promptText="Режим роботи" visibleRowCount="5" />
+                    </children>
+                    <VBox.margin>
+                        <Insets />
+                    </VBox.margin>
+                    <padding>
+                        <Insets bottom="12.0" top="12.0" />
+                    </padding>
+                </VBox>
+                <VBox alignment="CENTER" prefHeight="201.0" prefWidth="243.0" spacing="12.0">
+                    <children>
+                        <Separator prefWidth="243.0" />
+                        <Button fx:id="fileSelectionButton" alignment="CENTER" onAction="#handleOpenFile" prefHeight="40.0" prefWidth="180.0" text="Обрати файл" />
+                        <Button fx:id="convertToAudioButton" onAction="#handleConvertToAudio" prefHeight="40.0" prefWidth="180.0" text="Конвертувати в аудіо" />
+                        <Button fx:id="speechToTextButton" alignment="CENTER" onAction="#speechToText" prefHeight="40.0" prefWidth="180.0" text="Перетворити Аудіо в текст" />
+                        <Separator prefWidth="200.0" />
+                    </children>
+                    <VBox.margin>
+                        <Insets />
+                    </VBox.margin>
+                </VBox>
+                <VBox alignment="CENTER" prefHeight="200.0" prefWidth="100.0">
+                    <children>
+                        <Label alignment="CENTER" text="ПОСТ-ОБРОБКА">
+                            <VBox.margin>
+                                <Insets />
+                            </VBox.margin>
+                        </Label>
+                        <CheckBox fx:id="removeTagsCB" mnemonicParsing="false" prefWidth="200.0" text="Прибрати теги [music] ">
+                            <VBox.margin>
+                                <Insets top="25.0" />
+                            </VBox.margin>
+                            <padding>
+                                <Insets bottom="3.0" top="3.0" />
+                            </padding>
+                        </CheckBox>
+                        <CheckBox fx:id="removeSymbolsCB" mnemonicParsing="false" prefWidth="200.0" text=" Прибрати символи ♪ ♫ ">
+                            <padding>
+                                <Insets bottom="3.0" top="3.0" />
+                            </padding>
+                        </CheckBox>
+                        <CheckBox fx:id="removeSpacesCB" mnemonicParsing="false" prefWidth="200.0" text="Прибрати порожні рядки ">
+                            <padding>
+                                <Insets bottom="3.0" top="3.0" />
+                            </padding>
+                        </CheckBox>
+                        <CheckBox fx:id="addTimelapsCB" mnemonicParsing="false" prefWidth="200.0" text="Додати часові проміжки">
+                            <padding>
+                                <Insets bottom="3.0" top="3.0" />
+                            </padding>
+                        </CheckBox>
+                    </children>
+                </VBox>
+            </children>
+        </VBox>
+    </left>
 
 </BorderPane>
