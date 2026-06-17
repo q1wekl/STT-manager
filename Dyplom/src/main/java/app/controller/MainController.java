@@ -74,6 +74,7 @@ public class MainController {
 
     @FXML
     public void initialize() {
+        resultText.setEditable(false);
         ObservableList<String> models = FXCollections.observableArrayList(MODEL_MAP.keySet().stream().sorted().toList());
         modelTypeComboBox.setItems(models);
 

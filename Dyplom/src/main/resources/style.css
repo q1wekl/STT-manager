@@ -1,0 +1,49 @@
+/* ProgressBar */
+.progress-bar .track {
+    -fx-background-color: #F4EEE0;
+    -fx-background-radius: 0px;
+}
+.progress-bar .bar {
+    -fx-background-color: #BBFAAE;
+    -fx-background-radius: 0px;
+    -fx-background-insets: 2px;
+}
+
+/* TextArea */
+.text-area {
+    -fx-background-color: #F4EEE0;
+}
+.text-area .content {
+    -fx-background-color: #F4EEE0;
+}
+.text-area .scroll-pane {
+    -fx-background-color: #F4EEE0;
+}
+.text-area .scroll-pane .viewport {
+    -fx-background-color: #F4EEE0;
+}
+
+//* CheckBox */
+ .check-box {
+ -fx-font-family: 'Lucida Console';
+     -fx-font-size: 12px;
+     -fx-text-fill: #e5e1e2;
+ }
+ .check-box .box {
+     -fx-background-color: #2e2640;
+     -fx-border-color: #2e2640;
+     -fx-border-width: 1.5px;
+     -fx-border-radius: 3px;
+     -fx-background-radius: 3px;
+ }
+ .check-box:hover .box {
+     -fx-border-color: #c8b89a;
+     -fx-background-color: #3a2f4a;
+ }
+ .check-box:selected .box {
+     -fx-background-color: #F4EEE0;
+     -fx-border-color: #F4EEE0;
+ }
+ .check-box:selected .mark {
+     -fx-background-color: #4F4557;
+ }

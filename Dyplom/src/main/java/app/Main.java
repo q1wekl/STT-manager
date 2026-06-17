@@ -20,8 +20,7 @@ public class Main extends Application{
         );
 
         Scene scene = new Scene(loader.load());
-
-        stage.setScene(scene);
+        scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
        // stage.setMaximized(true);
 
         stage.setOnCloseRequest(event -> {
@@ -31,6 +30,7 @@ public class Main extends Application{
             System.exit(0);
         });
 
+        stage.setScene(scene);
         stage.show();
     }
     @Override
