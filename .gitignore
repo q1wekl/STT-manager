@@ -1,0 +1,4 @@
+Dyplom/models/
+*.bin
+ffmpeg.exe
+modules/
