@@ -36,7 +36,7 @@ public class ModelConfig {
             case "large" -> new ModelConfig("large", "models/whisper/ggml-large.bin",
                     new ChunkingConfig(15, 30), 1);
 
-            default -> throw new IllegalArgumentException("Unknown model: " + modelId);
+           default -> throw new IllegalArgumentException("Unknown model: " + modelId);
         };
     }
 }

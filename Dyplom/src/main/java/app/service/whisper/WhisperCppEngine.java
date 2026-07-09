@@ -32,7 +32,9 @@ public class WhisperCppEngine implements SpeechToTextEngine {
 
             switch (this.backendMode) {
                 case "cuda":
-                    loadAbsolute(selectedDir.resolve("cudart64_13.dll"));
+                    loadAbsolute(selectedDir.resolve("cudart64_12.dll"));
+                    loadAbsolute(selectedDir.resolve("cublasLt64_12.dll"));
+                    loadAbsolute(selectedDir.resolve("cublas64_12.dll"));
                     loadAbsolute(selectedDir.resolve("ggml.dll"));
                     loadAbsolute(selectedDir.resolve("whisper.dll"));
                     break;
