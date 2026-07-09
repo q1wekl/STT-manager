@@ -1,1 +1,5 @@
 Dyplom/models/whisper/*.bin
+Dyplom/native/cuda/
+Dyplom/native/vulkan/
+Dyplom/liberica-jdk/
+Dyplom/temp/
