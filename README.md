@@ -1,6 +1,6 @@
 **English** | [Українська](README.uk.md)
 
-# SFX RTX TripleX
+# STT-manager
 
 ## About
 
